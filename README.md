@@ -206,6 +206,7 @@ To disable logging, set `log_file` to an empty string in the settings file or vi
 | `r` | Refresh issues |
 | `n` | Create new issue |
 | `e` | Edit issue title |
+| `E` | Edit issue description in `$EDITOR` |
 | `Ctrl+L` | Edit issue labels |
 | `s` | Change status |
 | `a` | Assign to user |
@@ -222,6 +223,7 @@ To disable logging, set `log_file` to an empty string in the settings file or vi
 | `d` | Remove parent |
 | `]` | Expand all sub-issues |
 | `[` | Collapse all sub-issues |
+| `f` | Fullscreen issue description |
 
 ### Details Pane (right pane)
 
@@ -233,6 +235,8 @@ To disable logging, set `log_file` to an empty string in the settings file or vi
 | `Ctrl+U` | Scroll up half-page |
 | `Tab` | Switch between description and comments |
 | `h` / `←` | Focus issues pane |
+| `f` | Fullscreen issue description |
+| `E` | Edit issue description in `$EDITOR` |
 
 ### Command Palette
 

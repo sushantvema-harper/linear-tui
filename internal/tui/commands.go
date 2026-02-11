@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -129,6 +130,81 @@ func handleAskAgent(a *App) {
 			a.agentOutputModal.AppendLine("Agent run completed.")
 		}()
 	})
+}
+
+// editDescriptionInEditor opens the selected issue's description in $EDITOR.
+func editDescriptionInEditor(a *App) {
+	issue := a.GetSelectedIssue()
+	if issue == nil {
+		a.updateStatusBarWithError(fmt.Errorf("no issue selected"))
+		return
+	}
+
+	original := issue.Description
+	issueID := issue.ID
+	identifier := issue.Identifier
+
+	tmpFile, err := os.CreateTemp("", "linear-*.md")
+	if err != nil {
+		logger.ErrorWithErr(err, "tui.commands: failed to create temp file")
+		a.updateStatusBarWithError(err)
+		return
+	}
+	tmpPath := tmpFile.Name()
+
+	if _, err := tmpFile.WriteString(original); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		logger.ErrorWithErr(err, "tui.commands: failed to write temp file")
+		a.updateStatusBarWithError(err)
+		return
+	}
+	tmpFile.Close()
+
+	a.app.Suspend(func() {
+		editor := os.Getenv("EDITOR")
+		if editor == "" {
+			editor = "nvim"
+		}
+		cmd := exec.Command(editor, tmpPath)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			logger.ErrorWithErr(err, "tui.commands: editor exited with error")
+		}
+	})
+
+	newBytes, err := os.ReadFile(tmpPath)
+	os.Remove(tmpPath)
+	if err != nil {
+		logger.ErrorWithErr(err, "tui.commands: failed to read temp file")
+		a.updateStatusBarWithError(err)
+		return
+	}
+
+	newDesc := string(newBytes)
+	if newDesc == original {
+		return
+	}
+
+	go func() {
+		ctx := context.Background()
+		_, err := a.GetAPI().UpdateIssue(ctx, linearapi.UpdateIssueInput{
+			ID:          issueID,
+			Description: &newDesc,
+		})
+		a.QueueUpdateDraw(func() {
+			if err != nil {
+				logger.ErrorWithErr(err, "tui.commands: failed to update description issue=%s", identifier)
+				a.updateStatusBarWithError(err)
+				return
+			}
+			logger.Info("tui.commands: updated description issue=%s", identifier)
+			a.showToast(fmt.Sprintf("Updated description for %s", identifier))
+			go a.refreshIssues(issueID)
+		})
+	}()
 }
 
 // DefaultCommands returns the default set of commands for the palette.
@@ -424,6 +500,15 @@ func DefaultCommands(app *App) []Command {
 					return
 				}
 				a.ShowEditTitleModal()
+			},
+		},
+		{
+			ID:           "edit_description",
+			Title:        "Edit issue description",
+			Keywords:     []string{"edit", "description", "body", "editor", "nvim"},
+			ShortcutRune: 'E',
+			Run: func(a *App) {
+				editDescriptionInEditor(a)
 			},
 		},
 		{

@@ -119,6 +119,10 @@ type App struct {
 	focusedDetailsView     bool // false = description, true = comments
 	detailsCommentsVisible bool // Tracks whether comments view is shown
 
+	// Fullscreen description view
+	detailsFullscreen     bool            // whether fullscreen mode is active
+	detailsFullscreenView *tview.TextView // dedicated fullscreen TextView
+
 	// Vim-style prefix key state
 	pendingG bool // true when 'g' has been pressed and waiting for the next key
 }
@@ -650,6 +654,11 @@ func (a *App) buildLayout() {
 // bindGlobalKeys sets up global keyboard shortcuts.
 func (a *App) bindGlobalKeys() {
 	a.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Handle fullscreen description view if active
+		if a.detailsFullscreen {
+			return a.handleFullscreenKey(event)
+		}
+
 		// Handle picker modal if active
 		if a.pickerActive {
 			return a.pickerModal.HandleKey(event)
@@ -900,6 +909,7 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 				issue := a.GetSelectedIssue()
 				if issue != nil && issue.URL != "" {
 					_ = openURL(issue.URL)
+					a.showToast(fmt.Sprintf("Opened %s in browser", issue.Identifier))
 				}
 				return nil
 			case 'y':
@@ -907,6 +917,7 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 				issue := a.GetSelectedIssue()
 				if issue != nil {
 					_ = copyToClipboard(issue.Identifier)
+					a.showToast(fmt.Sprintf("Copied %s to clipboard", issue.Identifier))
 				}
 				return nil
 			}
@@ -953,6 +964,9 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 				a.activeIssuesSection = IssuesSectionMy
 				a.updateFocus()
 			}
+			return nil
+		case 'f':
+			a.openDetailsFullscreen()
 			return nil
 		case 'g':
 			// Start 'g' prefix sequence
@@ -1022,9 +1036,16 @@ func (a *App) handleDetailsKey(event *tcell.EventKey) *tcell.EventKey {
 		}
 		return nil
 	case tcell.KeyRune:
-		if event.Rune() == 'h' {
+		switch event.Rune() {
+		case 'h':
 			a.focusedPane = FocusIssues
 			a.updateFocus()
+			return nil
+		case 'f':
+			a.openDetailsFullscreen()
+			return nil
+		case 'E':
+			editDescriptionInEditor(a)
 			return nil
 		}
 	}
@@ -1037,6 +1058,90 @@ func (a *App) activeDetailsView() *tview.TextView {
 		return a.detailsCommentsView
 	}
 	return a.detailsDescriptionView
+}
+
+// openDetailsFullscreen enters fullscreen mode for the issue description.
+func (a *App) openDetailsFullscreen() {
+	a.issuesMu.RLock()
+	issue := a.selectedIssue
+	a.issuesMu.RUnlock()
+	if issue == nil {
+		return
+	}
+
+	if a.detailsFullscreenView == nil {
+		a.detailsFullscreenView = tview.NewTextView()
+		a.detailsFullscreenView.SetDynamicColors(true).
+			SetWrap(true).
+			SetWordWrap(true).
+			SetBorder(false).
+			SetBackgroundColor(a.theme.Background)
+		a.detailsFullscreenView.SetBorderPadding(1, 1, 2, 2)
+	}
+
+	// Copy content from description view
+	a.detailsFullscreenView.SetText(a.detailsDescriptionView.GetText(true))
+	a.detailsFullscreenView.ScrollToBeginning()
+
+	a.detailsFullscreen = true
+	a.pages.AddPage("details_fullscreen", a.detailsFullscreenView, true, true)
+	a.app.SetFocus(a.detailsFullscreenView)
+}
+
+// closeDetailsFullscreen exits fullscreen mode and restores the normal layout.
+func (a *App) closeDetailsFullscreen() {
+	a.pages.RemovePage("details_fullscreen")
+	a.detailsFullscreen = false
+	a.updateFocus()
+}
+
+// handleFullscreenKey handles keyboard input when fullscreen description view is active.
+func (a *App) handleFullscreenKey(event *tcell.EventKey) *tcell.EventKey {
+	switch event.Key() {
+	case tcell.KeyEscape:
+		a.closeDetailsFullscreen()
+		return nil
+	case tcell.KeyCtrlN:
+		row, col := a.detailsFullscreenView.GetScrollOffset()
+		a.detailsFullscreenView.ScrollTo(row+1, col)
+		return nil
+	case tcell.KeyCtrlP:
+		row, col := a.detailsFullscreenView.GetScrollOffset()
+		if row > 0 {
+			a.detailsFullscreenView.ScrollTo(row-1, col)
+		}
+		return nil
+	case tcell.KeyCtrlD:
+		_, _, _, h := a.detailsFullscreenView.GetInnerRect()
+		delta := max(1, h/2)
+		row, col := a.detailsFullscreenView.GetScrollOffset()
+		a.detailsFullscreenView.ScrollTo(row+delta, col)
+		return nil
+	case tcell.KeyCtrlU:
+		_, _, _, h := a.detailsFullscreenView.GetInnerRect()
+		delta := max(1, h/2)
+		row, col := a.detailsFullscreenView.GetScrollOffset()
+		targetRow := row - delta
+		if targetRow < 0 {
+			targetRow = 0
+		}
+		a.detailsFullscreenView.ScrollTo(targetRow, col)
+		return nil
+	case tcell.KeyCtrlC:
+		a.app.Stop()
+		return nil
+	case tcell.KeyRune:
+		switch event.Rune() {
+		case 'f':
+			a.closeDetailsFullscreen()
+			return nil
+		case 'q':
+			a.app.Stop()
+			return nil
+		}
+	}
+	// Consume all other keys in fullscreen
+	return nil
 }
 
 // handlePaletteKey handles keyboard input when palette is open.
@@ -1968,6 +2073,17 @@ func (a *App) updateStatusBar() {
 // updateStatusBarWithError updates the status bar with an error message.
 func (a *App) updateStatusBarWithError(err error) {
 	a.statusBar.SetText(fmt.Sprintf("%sError: %v[-]", a.themeTags.Error, err))
+}
+
+// showToast briefly displays a message in the status bar, then restores the normal status bar after a delay.
+func (a *App) showToast(msg string) {
+	a.statusBar.SetText(fmt.Sprintf("%s%s[-]", a.themeTags.Accent, msg))
+	go func() {
+		time.Sleep(1500 * time.Millisecond)
+		a.queueUpdateDraw(func() {
+			a.updateStatusBar()
+		})
+	}()
 }
 
 // GetAPI returns the Linear API client (used by commands).
