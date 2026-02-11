@@ -18,7 +18,7 @@ A terminal user interface (TUI) for Linear built with Go and tview.
 
 - 3-pane layout (navigation tree + issues list + details view)
 - Command palette for quick actions with keyboard shortcuts
-- Vim-style keyboard navigation (j/k, h/l, g/G)
+- Vim-style keyboard navigation (Ctrl+N/P, Ctrl+D/U, h/l, gg/G, g-prefix motions)
 - Mouse support (click to focus, scroll to navigate)
 - Issue descriptions with markdown rendering
 - Sub-issues support (expand/collapse, create, view parent)
@@ -147,47 +147,100 @@ To disable logging, set `log_file` to an empty string in the settings file or vi
 
 ## Keyboard Shortcuts
 
-### Navigation
+### Global
 
-- `j` / `↓` - Move down
-- `k` / `↑` - Move up
-- `h` / `←` - Focus left pane
-- `l` / `→` - Focus right pane
-- `g` - Jump to top
-- `G` - Jump to bottom
-- `Tab` / `Shift+Tab` - Cycle between panes
-- `Space` - Toggle expand/collapse sub-issues
-- `Enter` - Select issue / Execute command
-- `Esc` - Close palette / Cancel / Clear search
-- `q` - Quit
+| Key | Action |
+|-----|--------|
+| `:` | Open command palette |
+| `/` | Open search palette |
+| `Tab` / `Shift+Tab` | Cycle between panes |
+| `Esc` | Close palette / Clear search |
+| `q` | Quit |
+
+### Navigation Tree (left pane)
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+N` | Next node |
+| `Ctrl+P` | Previous node |
+| `Ctrl+D` | Half-page down |
+| `Ctrl+U` | Half-page up |
+| `Enter` | Select team/project/status filter |
+| `l` / `→` | Focus issues pane |
+
+### Issues Table (center pane)
+
+#### Movement
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+N` | Next issue |
+| `Ctrl+P` | Previous issue |
+| `Ctrl+D` | Half-page down |
+| `Ctrl+U` | Half-page up |
+| `j` | Focus Other Issues section (from My Issues) |
+| `k` | Focus My Issues section (from Other Issues) |
+| `gg` | Go to top of section |
+| `G` | Go to bottom of section |
+| `Space` | Toggle expand/collapse sub-issues |
+| `Enter` | Toggle expand (parent) / Focus details (leaf) |
+
+#### Pane Navigation
+
+| Key | Action |
+|-----|--------|
+| `h` / `←` | Focus navigation pane |
+| `l` / `→` | Focus details pane |
+
+#### Motions (g-prefix)
+
+| Key | Action |
+|-----|--------|
+| `gx` | Open selected issue in browser |
+| `gy` | Copy issue identifier to clipboard |
+
+#### Quick Commands (from issues pane)
+
+| Key | Action |
+|-----|--------|
+| `r` | Refresh issues |
+| `n` | Create new issue |
+| `e` | Edit issue title |
+| `Ctrl+L` | Edit issue labels |
+| `s` | Change status |
+| `a` | Assign to user |
+| `m` | Assign to me |
+| `u` | Unassign issue |
+| `t` | Add comment |
+| `o` | Open in browser |
+| `y` | Copy issue ID |
+| `w` | Copy issue URL |
+| `x` | Archive issue |
+| `b` | Create sub-issue |
+| `p` | View parent issue |
+| `i` | Set parent issue |
+| `d` | Remove parent |
+| `]` | Expand all sub-issues |
+| `[` | Collapse all sub-issues |
+
+### Details Pane (right pane)
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+N` | Scroll down 1 line |
+| `Ctrl+P` | Scroll up 1 line |
+| `Ctrl+D` | Scroll down half-page |
+| `Ctrl+U` | Scroll up half-page |
+| `Tab` | Switch between description and comments |
+| `h` / `←` | Focus issues pane |
 
 ### Command Palette
 
-- `:` - Open command palette
-- `/` - Open search palette
-- `ask agent` - Run a terminal agent on the selected issue
-
-### Quick Commands
-
-- `r` - Refresh issues
-- `n` - Create new issue
-- `e` - Edit issue title
-- `g` - Edit issue labels
-- `s` - Change status
-- `a` - Assign to user
-- `m` - Assign to me
-- `u` - Unassign issue
-- `t` - Add comment
-- `o` - Open in browser
-- `y` - Copy issue ID
-- `w` - Copy issue URL
-- `x` - Archive issue
-- `b` - Create sub-issue
-- `p` - View parent issue
-- `i` - Set parent issue
-- `d` - Remove parent
-- `]` - Expand all sub-issues
-- `[` - Collapse all sub-issues
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Navigate commands |
+| `Enter` | Execute selected command / Submit search |
+| `Esc` | Close palette |
 
 ## Development
 
