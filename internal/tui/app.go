@@ -118,6 +118,9 @@ type App struct {
 	// Details pane sub-view focus
 	focusedDetailsView     bool // false = description, true = comments
 	detailsCommentsVisible bool // Tracks whether comments view is shown
+
+	// Vim-style prefix key state
+	pendingG bool // true when 'g' has been pressed and waiting for the next key
 }
 
 // FocusTarget indicates which pane has focus.
@@ -884,6 +887,33 @@ func (a *App) getVisibleTreeNodes() []*tview.TreeNode {
 
 // handleIssuesKey handles keyboard input when issues pane is focused.
 func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
+	// Handle 'g' prefix sequences (gg = top, gx = open browser, gy = copy id)
+	if a.pendingG {
+		a.pendingG = false
+		if event.Key() == tcell.KeyRune {
+			switch event.Rune() {
+			case 'g':
+				// gg: go to top of current section (delegated to table)
+				return event
+			case 'x':
+				// gx: open selected issue in browser
+				issue := a.GetSelectedIssue()
+				if issue != nil && issue.URL != "" {
+					_ = openURL(issue.URL)
+				}
+				return nil
+			case 'y':
+				// gy: copy issue identifier to clipboard
+				issue := a.GetSelectedIssue()
+				if issue != nil {
+					_ = copyToClipboard(issue.Identifier)
+				}
+				return nil
+			}
+		}
+		// Any other key after 'g': cancel prefix and fall through
+	}
+
 	switch event.Key() {
 	case tcell.KeyLeft:
 		a.focusedPane = FocusNavigation
@@ -924,9 +954,13 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 				a.updateFocus()
 			}
 			return nil
+		case 'g':
+			// Start 'g' prefix sequence
+			a.pendingG = true
+			return nil
 		}
 		// Handle command shortcuts (plain letters) - skip keys handled by the table
-		if r != 'g' && r != 'G' {
+		if r != 'G' {
 			for _, cmd := range a.paletteCtrl.commands {
 				if cmd.ShortcutRune != 0 && cmd.ShortcutRune == r {
 					cmd.Run(a)

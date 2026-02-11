@@ -163,7 +163,7 @@ func (a *App) setupIssuesTableNavigation(table *tview.Table, section IssuesSecti
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case 'g':
-				// Go to top of current section
+				// gg: go to top of current section (second 'g' arrives here after handleIssuesKey consumed the first)
 				table.Select(1, 0)
 				if issue := a.getIssueFromRowForSection(1, section); issue != nil {
 					a.onIssueSelected(*issue)
