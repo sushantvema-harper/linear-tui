@@ -162,45 +162,6 @@ func (a *App) setupIssuesTableNavigation(table *tview.Table, section IssuesSecti
 		switch event.Key() {
 		case tcell.KeyRune:
 			switch event.Rune() {
-			case 'j':
-				row, _ := table.GetSelection()
-				if row < table.GetRowCount()-1 {
-					table.Select(row+1, 0)
-					if issue := a.getIssueFromRowForSection(row+1, section); issue != nil {
-						a.onIssueSelected(*issue)
-						a.activeIssuesSection = section
-					}
-				} else if section == IssuesSectionMy && len(a.otherIssueRows) > 0 {
-					// At bottom of this section - try to move to next section
-					// Move to Other Issues table
-					a.activeIssuesSection = IssuesSectionOther
-					a.otherIssuesTable.Select(1, 0)
-					if issue := a.getIssueFromRowForSection(1, IssuesSectionOther); issue != nil {
-						a.onIssueSelected(*issue)
-					}
-					a.updateFocus()
-				}
-				return nil
-			case 'k':
-				row, _ := table.GetSelection()
-				if row > 1 {
-					table.Select(row-1, 0)
-					if issue := a.getIssueFromRowForSection(row-1, section); issue != nil {
-						a.onIssueSelected(*issue)
-						a.activeIssuesSection = section
-					}
-				} else if section == IssuesSectionOther && len(a.myIssueRows) > 0 {
-					// At top of this section - try to move to previous section
-					// Move to My Issues table
-					a.activeIssuesSection = IssuesSectionMy
-					lastRow := len(a.myIssueRows)
-					a.myIssuesTable.Select(lastRow, 0)
-					if issue := a.getIssueFromRowForSection(lastRow, IssuesSectionMy); issue != nil {
-						a.onIssueSelected(*issue)
-					}
-					a.updateFocus()
-				}
-				return nil
 			case 'g':
 				// Go to top of current section
 				table.Select(1, 0)
@@ -224,48 +185,6 @@ func (a *App) setupIssuesTableNavigation(table *tview.Table, section IssuesSecti
 					if issue := a.getIssueFromRowForSection(lastRow, section); issue != nil {
 						a.onIssueSelected(*issue)
 						a.activeIssuesSection = section
-					}
-				}
-				return nil
-			case 'l':
-				// Expand current parent issue
-				row, _ := table.GetSelection()
-				if issue := a.getIssueFromRowForSection(row, section); issue != nil {
-					if len(issue.Children) > 0 && !a.expandedState[issue.ID] {
-						a.toggleIssueExpanded(issue.ID)
-						a.activeIssuesSection = section
-					}
-				}
-				return nil
-			case 'h':
-				// Collapse current parent issue, or go to parent if on child
-				row, _ := table.GetSelection()
-				if issue := a.getIssueFromRowForSection(row, section); issue != nil {
-					if len(issue.Children) > 0 && a.expandedState[issue.ID] {
-						// Collapse this parent
-						a.toggleIssueExpanded(issue.ID)
-						a.activeIssuesSection = section
-					} else if issue.Parent != nil {
-						// Navigate to parent - may be in different section
-						parentRow := a.getRowForIssueInSection(issue.Parent.ID, IssuesSectionMy)
-						if parentRow > 0 {
-							a.activeIssuesSection = IssuesSectionMy
-							a.myIssuesTable.Select(parentRow, 0)
-							if parent := a.getIssueFromRowForSection(parentRow, IssuesSectionMy); parent != nil {
-								a.onIssueSelected(*parent)
-							}
-							a.updateFocus()
-						} else {
-							parentRow = a.getRowForIssueInSection(issue.Parent.ID, IssuesSectionOther)
-							if parentRow > 0 {
-								a.activeIssuesSection = IssuesSectionOther
-								a.otherIssuesTable.Select(parentRow, 0)
-								if parent := a.getIssueFromRowForSection(parentRow, IssuesSectionOther); parent != nil {
-									a.onIssueSelected(*parent)
-								}
-								a.updateFocus()
-							}
-						}
 					}
 				}
 				return nil
@@ -298,6 +217,98 @@ func (a *App) setupIssuesTableNavigation(table *tview.Table, section IssuesSecti
 			a.onIssueSelected(*issue)
 			a.focusedPane = FocusDetails
 			a.updateFocus()
+			return nil
+		case tcell.KeyCtrlN:
+			// Ctrl+N: move down (same as j)
+			row, _ := table.GetSelection()
+			if row < table.GetRowCount()-1 {
+				table.Select(row+1, 0)
+				if issue := a.getIssueFromRowForSection(row+1, section); issue != nil {
+					a.onIssueSelected(*issue)
+					a.activeIssuesSection = section
+				}
+			} else if section == IssuesSectionMy && len(a.otherIssueRows) > 0 {
+				a.activeIssuesSection = IssuesSectionOther
+				a.otherIssuesTable.Select(1, 0)
+				if issue := a.getIssueFromRowForSection(1, IssuesSectionOther); issue != nil {
+					a.onIssueSelected(*issue)
+				}
+				a.updateFocus()
+			}
+			return nil
+		case tcell.KeyCtrlP:
+			// Ctrl+P: move up (same as k)
+			row, _ := table.GetSelection()
+			if row > 1 {
+				table.Select(row-1, 0)
+				if issue := a.getIssueFromRowForSection(row-1, section); issue != nil {
+					a.onIssueSelected(*issue)
+					a.activeIssuesSection = section
+				}
+			} else if section == IssuesSectionOther && len(a.myIssueRows) > 0 {
+				a.activeIssuesSection = IssuesSectionMy
+				lastRow := len(a.myIssueRows)
+				a.myIssuesTable.Select(lastRow, 0)
+				if issue := a.getIssueFromRowForSection(lastRow, IssuesSectionMy); issue != nil {
+					a.onIssueSelected(*issue)
+				}
+				a.updateFocus()
+			}
+			return nil
+		case tcell.KeyCtrlD:
+			// Ctrl+D: half-page down within current section
+			row, _ := table.GetSelection()
+			var sectionRows []IssueRow
+			switch section {
+			case IssuesSectionMy:
+				sectionRows = a.myIssueRows
+			case IssuesSectionOther:
+				sectionRows = a.otherIssueRows
+			}
+			if len(sectionRows) == 0 {
+				return nil
+			}
+			_, _, _, h := table.GetInnerRect()
+			halfPage := max(1, h/2)
+			lastDataRow := len(sectionRows) // last valid row (1-indexed, row 0 is header)
+			targetRow := row + halfPage
+			if targetRow > lastDataRow {
+				targetRow = lastDataRow
+			}
+			if targetRow != row {
+				table.Select(targetRow, 0)
+				if issue := a.getIssueFromRowForSection(targetRow, section); issue != nil {
+					a.onIssueSelected(*issue)
+					a.activeIssuesSection = section
+				}
+			}
+			return nil
+		case tcell.KeyCtrlU:
+			// Ctrl+U: half-page up within current section
+			row, _ := table.GetSelection()
+			var sectionRows []IssueRow
+			switch section {
+			case IssuesSectionMy:
+				sectionRows = a.myIssueRows
+			case IssuesSectionOther:
+				sectionRows = a.otherIssueRows
+			}
+			if len(sectionRows) == 0 {
+				return nil
+			}
+			_, _, _, h := table.GetInnerRect()
+			halfPage := max(1, h/2)
+			targetRow := row - halfPage
+			if targetRow < 1 {
+				targetRow = 1
+			}
+			if targetRow != row {
+				table.Select(targetRow, 0)
+				if issue := a.getIssueFromRowForSection(targetRow, section); issue != nil {
+					a.onIssueSelected(*issue)
+					a.activeIssuesSection = section
+				}
+			}
 			return nil
 		case tcell.KeyDown:
 			row, _ := table.GetSelection()

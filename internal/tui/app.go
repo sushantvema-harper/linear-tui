@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -100,6 +101,8 @@ type App struct {
 	pendingRefreshAllowFocusChange bool
 	pickerActive                   bool
 	refreshGeneration              atomic.Int64
+	searchDebounceTimer            *time.Timer
+	searchDebounceMu               sync.Mutex
 
 	// Lazy loading helpers (overridable in tests)
 	fetchIssuesPage func(context.Context, linearapi.FetchIssuesParams, *string) (linearapi.IssuePage, error)
@@ -788,6 +791,62 @@ func (a *App) handleNavigationKey(event *tcell.EventKey) *tcell.EventKey {
 		a.focusedPane = FocusIssues
 		a.updateFocus()
 		return nil
+	case tcell.KeyCtrlN:
+		// Ctrl+N: delegate to tree's built-in down handler
+		return tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)
+	case tcell.KeyCtrlP:
+		// Ctrl+P: delegate to tree's built-in up handler
+		return tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)
+	case tcell.KeyCtrlD:
+		// Ctrl+D: half-page down in navigation tree
+		nodes := a.getVisibleTreeNodes()
+		if len(nodes) == 0 {
+			return nil
+		}
+		current := a.navigationTree.GetCurrentNode()
+		currentIdx := -1
+		for i, n := range nodes {
+			if n == current {
+				currentIdx = i
+				break
+			}
+		}
+		if currentIdx < 0 {
+			return nil
+		}
+		_, _, _, h := a.navigationTree.GetInnerRect()
+		halfPage := max(1, h/2)
+		targetIdx := currentIdx + halfPage
+		if targetIdx >= len(nodes) {
+			targetIdx = len(nodes) - 1
+		}
+		a.navigationTree.SetCurrentNode(nodes[targetIdx])
+		return nil
+	case tcell.KeyCtrlU:
+		// Ctrl+U: half-page up in navigation tree
+		nodes := a.getVisibleTreeNodes()
+		if len(nodes) == 0 {
+			return nil
+		}
+		current := a.navigationTree.GetCurrentNode()
+		currentIdx := -1
+		for i, n := range nodes {
+			if n == current {
+				currentIdx = i
+				break
+			}
+		}
+		if currentIdx < 0 {
+			return nil
+		}
+		_, _, _, h := a.navigationTree.GetInnerRect()
+		halfPage := max(1, h/2)
+		targetIdx := currentIdx - halfPage
+		if targetIdx < 0 {
+			targetIdx = 0
+		}
+		a.navigationTree.SetCurrentNode(nodes[targetIdx])
+		return nil
 	case tcell.KeyRune:
 		if event.Rune() == 'l' {
 			a.focusedPane = FocusIssues
@@ -796,6 +855,31 @@ func (a *App) handleNavigationKey(event *tcell.EventKey) *tcell.EventKey {
 		}
 	}
 	return event
+}
+
+// getVisibleTreeNodes returns all visible nodes in the navigation tree via DFS walk of expanded nodes.
+func (a *App) getVisibleTreeNodes() []*tview.TreeNode {
+	root := a.navigationTree.GetRoot()
+	if root == nil {
+		return nil
+	}
+	var nodes []*tview.TreeNode
+	var walk func(node *tview.TreeNode)
+	walk = func(node *tview.TreeNode) {
+		nodes = append(nodes, node)
+		if node.IsExpanded() {
+			for _, child := range node.GetChildren() {
+				walk(child)
+			}
+		}
+	}
+	// Walk from root's children (root itself is not selectable in our tree)
+	if root.IsExpanded() {
+		for _, child := range root.GetChildren() {
+			walk(child)
+		}
+	}
+	return nodes
 }
 
 // handleIssuesKey handles keyboard input when issues pane is focused.
@@ -810,9 +894,12 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 		a.focusedDetailsView = false // Start with description
 		a.updateFocus()
 		return nil
+	case tcell.KeyCtrlL:
+		a.ShowEditLabelsModal()
+		return nil
 	case tcell.KeyRune:
 		r := event.Rune()
-		// Handle vim-style navigation first
+		// Handle vim-style pane navigation
 		switch r {
 		case 'h':
 			a.focusedPane = FocusNavigation
@@ -823,9 +910,23 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 			a.focusedDetailsView = false // Start with description
 			a.updateFocus()
 			return nil
+		case 'j':
+			// j: move down from My Issues to Other Issues
+			if a.activeIssuesSection == IssuesSectionMy && len(a.otherIssueRows) > 0 {
+				a.activeIssuesSection = IssuesSectionOther
+				a.updateFocus()
+			}
+			return nil
+		case 'k':
+			// k: move up from Other Issues to My Issues
+			if a.activeIssuesSection == IssuesSectionOther && len(a.myIssueRows) > 0 {
+				a.activeIssuesSection = IssuesSectionMy
+				a.updateFocus()
+			}
+			return nil
 		}
-		// Handle command shortcuts (plain letters) - skip navigation keys
-		if r != 'j' && r != 'k' { // j/k are handled by table for up/down
+		// Handle command shortcuts (plain letters) - skip keys handled by the table
+		if r != 'g' && r != 'G' {
 			for _, cmd := range a.paletteCtrl.commands {
 				if cmd.ShortcutRune != 0 && cmd.ShortcutRune == r {
 					cmd.Run(a)
@@ -844,6 +945,48 @@ func (a *App) handleDetailsKey(event *tcell.EventKey) *tcell.EventKey {
 		a.focusedPane = FocusIssues
 		a.updateFocus()
 		return nil
+	case tcell.KeyCtrlN:
+		// Ctrl+N: scroll down 1 line
+		view := a.activeDetailsView()
+		if view != nil {
+			row, col := view.GetScrollOffset()
+			view.ScrollTo(row+1, col)
+		}
+		return nil
+	case tcell.KeyCtrlP:
+		// Ctrl+P: scroll up 1 line
+		view := a.activeDetailsView()
+		if view != nil {
+			row, col := view.GetScrollOffset()
+			if row > 0 {
+				view.ScrollTo(row-1, col)
+			}
+		}
+		return nil
+	case tcell.KeyCtrlD:
+		// Ctrl+D: scroll down half-page
+		view := a.activeDetailsView()
+		if view != nil {
+			_, _, _, h := view.GetInnerRect()
+			delta := max(1, h/2)
+			row, col := view.GetScrollOffset()
+			view.ScrollTo(row+delta, col)
+		}
+		return nil
+	case tcell.KeyCtrlU:
+		// Ctrl+U: scroll up half-page
+		view := a.activeDetailsView()
+		if view != nil {
+			_, _, _, h := view.GetInnerRect()
+			delta := max(1, h/2)
+			row, col := view.GetScrollOffset()
+			targetRow := row - delta
+			if targetRow < 0 {
+				targetRow = 0
+			}
+			view.ScrollTo(targetRow, col)
+		}
+		return nil
 	case tcell.KeyRune:
 		if event.Rune() == 'h' {
 			a.focusedPane = FocusIssues
@@ -854,10 +997,19 @@ func (a *App) handleDetailsKey(event *tcell.EventKey) *tcell.EventKey {
 	return event
 }
 
+// activeDetailsView returns the currently active details text view.
+func (a *App) activeDetailsView() *tview.TextView {
+	if a.focusedDetailsView && a.detailsCommentsVisible {
+		return a.detailsCommentsView
+	}
+	return a.detailsDescriptionView
+}
+
 // handlePaletteKey handles keyboard input when palette is open.
 func (a *App) handlePaletteKey(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Key() {
 	case tcell.KeyEscape:
+		a.stopSearchDebounce()
 		if a.paletteCtrl.IsSearchMode() {
 			// In search mode, clear search and close palette
 			a.closePaletteUI()
@@ -867,6 +1019,7 @@ func (a *App) handlePaletteKey(event *tcell.EventKey) *tcell.EventKey {
 		a.closePalette()
 		return nil
 	case tcell.KeyEnter:
+		a.flushSearchDebounce()
 		if a.paletteCtrl.IsSearchMode() {
 			// In search mode, submit the search query
 			query := a.paletteCtrl.Query()
@@ -898,7 +1051,9 @@ func (a *App) handlePaletteKey(event *tcell.EventKey) *tcell.EventKey {
 		if len(query) > 0 {
 			a.paletteCtrl.SetQuery(query[:len(query)-1])
 			a.paletteInput.SetText(a.paletteCtrl.Query())
-			if !a.paletteCtrl.IsSearchMode() {
+			if a.paletteCtrl.IsSearchMode() {
+				a.resetSearchDebounce()
+			} else {
 				a.updatePaletteList()
 			}
 		}
@@ -907,7 +1062,9 @@ func (a *App) handlePaletteKey(event *tcell.EventKey) *tcell.EventKey {
 		query := a.paletteCtrl.Query() + string(event.Rune())
 		a.paletteCtrl.SetQuery(query)
 		a.paletteInput.SetText(query)
-		if !a.paletteCtrl.IsSearchMode() {
+		if a.paletteCtrl.IsSearchMode() {
+			a.resetSearchDebounce()
+		} else {
 			a.updatePaletteList()
 		}
 		return nil
@@ -1154,6 +1311,7 @@ func (a *App) openSearchPalette() {
 
 // closePalette closes the command palette overlay.
 func (a *App) closePalette() {
+	a.stopSearchDebounce()
 	a.paletteCtrl.SetSearchMode(false)
 	a.pages.HidePage("palette")
 	a.focusedPane = FocusNavigation
@@ -1163,6 +1321,7 @@ func (a *App) closePalette() {
 // closePaletteUI closes the palette UI without changing focus.
 // This is used when focus will be set by the caller (e.g., after search).
 func (a *App) closePaletteUI() {
+	a.stopSearchDebounce()
 	a.paletteCtrl.SetSearchMode(false)
 	a.pages.HidePage("palette")
 }
@@ -1658,6 +1817,49 @@ func (a *App) setSearchQuery(query string) {
 	go a.refreshIssues()
 }
 
+const searchDebounceInterval = 300 * time.Millisecond
+
+// setSearchQueryLive sets the search query and refreshes issues without changing focus.
+// The palette stays open so the user can keep typing.
+func (a *App) setSearchQueryLive(query string) {
+	trimmedQuery := strings.TrimSpace(query)
+	logger.Debug("tui.app: setting search query (live) query=%s", trimmedQuery)
+	a.searchQuery = trimmedQuery
+	// Do NOT change focus — palette stays open
+	go a.refreshIssuesWithFocusChange(false)
+}
+
+// resetSearchDebounce cancels any pending debounce timer and starts a new one
+// that will call setSearchQueryLive after searchDebounceInterval.
+func (a *App) resetSearchDebounce() {
+	query := a.paletteCtrl.Query()
+	a.searchDebounceMu.Lock()
+	if a.searchDebounceTimer != nil {
+		a.searchDebounceTimer.Stop()
+	}
+	a.searchDebounceTimer = time.AfterFunc(searchDebounceInterval, func() {
+		a.QueueUpdateDraw(func() {
+			a.setSearchQueryLive(query)
+		})
+	})
+	a.searchDebounceMu.Unlock()
+}
+
+// stopSearchDebounce cancels the debounce timer without firing.
+func (a *App) stopSearchDebounce() {
+	a.searchDebounceMu.Lock()
+	if a.searchDebounceTimer != nil {
+		a.searchDebounceTimer.Stop()
+		a.searchDebounceTimer = nil
+	}
+	a.searchDebounceMu.Unlock()
+}
+
+// flushSearchDebounce stops the timer without firing (Enter calls setSearchQuery directly).
+func (a *App) flushSearchDebounce() {
+	a.stopSearchDebounce()
+}
+
 // setSortField sets the sort field and refreshes issues.
 func (a *App) setSortField(field SortField) {
 	logger.Debug("tui.app: setting sort field field=%s", field)
@@ -1673,11 +1875,11 @@ func (a *App) updateStatusBar() {
 
 	switch a.focusedPane {
 	case FocusNavigation:
-		helpText = fmt.Sprintf("%s↑↓: navigate | Enter: select | Tab/→/l: next pane | Shift+Tab/←/h: prev pane | :: palette | /: search | q: quit[-]", keyColor)
+		helpText = fmt.Sprintf("%sCtrl+N/P: navigate | Ctrl+D/U: page | Enter: select | l: next pane | :: palette | /: search | q: quit[-]", keyColor)
 	case FocusIssues:
-		helpText = fmt.Sprintf("%sj/k: navigate | Enter: select | Tab/→/l: next pane | Shift+Tab/←/h: prev pane | :: palette | /: search | q: quit[-]", keyColor)
+		helpText = fmt.Sprintf("%sCtrl+N/P: navigate | Ctrl+D/U: page | j/k: switch section | h/l: switch pane | g/G: top/bottom | :: palette | q: quit[-]", keyColor)
 	case FocusDetails:
-		helpText = fmt.Sprintf("%sj/k: scroll | Tab: switch description/comments | →/l: next pane | Shift+Tab/←/h: prev pane | :: palette | /: search | q: quit[-]", keyColor)
+		helpText = fmt.Sprintf("%sCtrl+N/P: scroll | Ctrl+D/U: page | Tab: switch view | h: prev pane | :: palette | /: search | q: quit[-]", keyColor)
 	case FocusPalette:
 		helpText = fmt.Sprintf("%s↑↓: navigate | Enter: execute | Esc: close[-]", keyColor)
 	default:

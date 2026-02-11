@@ -239,3 +239,136 @@ func TestRefreshIssues_IncludesStateID(t *testing.T) {
 		t.Fatal("timed out waiting for fetchIssuesPage")
 	}
 }
+
+func TestSearchDebounce_FiresAfterDelay(t *testing.T) {
+	cfg := config.Config{PageSize: 10, CacheTTL: time.Minute}
+	app := NewApp(&linearapi.Client{}, cfg, nil)
+	app.queueUpdateDraw = func(f func()) { f() }
+
+	var fetchCount atomic.Int32
+	app.fetchIssuesPage = func(ctx context.Context, params linearapi.FetchIssuesParams, after *string) (linearapi.IssuePage, error) {
+		fetchCount.Add(1)
+		return linearapi.IssuePage{Issues: []linearapi.Issue{}, HasNext: false}, nil
+	}
+	app.fetchIssueByID = func(ctx context.Context, id string) (linearapi.Issue, error) {
+		return linearapi.Issue{}, nil
+	}
+
+	// Simulate typing in search mode: set the palette query and reset debounce
+	app.paletteCtrl.SetSearchMode(true)
+	app.paletteCtrl.SetQuery("test")
+	before := fetchCount.Load()
+	app.resetSearchDebounce()
+
+	// Should not fire immediately
+	time.Sleep(50 * time.Millisecond)
+	if fetchCount.Load() != before {
+		t.Fatal("debounce fired too early")
+	}
+
+	// Should fire after the debounce interval
+	waitForCondition(t, time.Second, func() bool {
+		return fetchCount.Load() > before
+	})
+
+	if app.searchQuery != "test" {
+		t.Fatalf("searchQuery = %q, want %q", app.searchQuery, "test")
+	}
+}
+
+func TestSearchDebounce_ResetsOnNewKeystroke(t *testing.T) {
+	cfg := config.Config{PageSize: 10, CacheTTL: time.Minute}
+	app := NewApp(&linearapi.Client{}, cfg, nil)
+	app.queueUpdateDraw = func(f func()) { f() }
+
+	var fetchCount atomic.Int32
+	app.fetchIssuesPage = func(ctx context.Context, params linearapi.FetchIssuesParams, after *string) (linearapi.IssuePage, error) {
+		fetchCount.Add(1)
+		return linearapi.IssuePage{Issues: []linearapi.Issue{}, HasNext: false}, nil
+	}
+	app.fetchIssueByID = func(ctx context.Context, id string) (linearapi.Issue, error) {
+		return linearapi.Issue{}, nil
+	}
+
+	app.paletteCtrl.SetSearchMode(true)
+
+	// Simulate rapid keystrokes — each resets the timer
+	app.paletteCtrl.SetQuery("a")
+	app.resetSearchDebounce()
+	time.Sleep(100 * time.Millisecond)
+
+	app.paletteCtrl.SetQuery("ab")
+	app.resetSearchDebounce()
+	time.Sleep(100 * time.Millisecond)
+
+	app.paletteCtrl.SetQuery("abc")
+	before := fetchCount.Load()
+	app.resetSearchDebounce()
+
+	// Wait for the final debounce to fire
+	waitForCondition(t, time.Second, func() bool {
+		return fetchCount.Load() > before
+	})
+
+	// Only the last query should have been applied
+	if app.searchQuery != "abc" {
+		t.Fatalf("searchQuery = %q, want %q", app.searchQuery, "abc")
+	}
+}
+
+func TestSearchDebounce_StopCancels(t *testing.T) {
+	cfg := config.Config{PageSize: 10, CacheTTL: time.Minute}
+	app := NewApp(&linearapi.Client{}, cfg, nil)
+	app.queueUpdateDraw = func(f func()) { f() }
+
+	var fetchCount atomic.Int32
+	app.fetchIssuesPage = func(ctx context.Context, params linearapi.FetchIssuesParams, after *string) (linearapi.IssuePage, error) {
+		fetchCount.Add(1)
+		return linearapi.IssuePage{Issues: []linearapi.Issue{}, HasNext: false}, nil
+	}
+
+	app.paletteCtrl.SetSearchMode(true)
+	app.paletteCtrl.SetQuery("cancel-me")
+	app.resetSearchDebounce()
+
+	// Immediately cancel
+	app.stopSearchDebounce()
+
+	// Wait well past the debounce interval
+	time.Sleep(500 * time.Millisecond)
+
+	if fetchCount.Load() != 0 {
+		t.Fatalf("fetchCount = %d, want 0 (timer should have been cancelled)", fetchCount.Load())
+	}
+	if app.searchQuery != "" {
+		t.Fatalf("searchQuery = %q, want empty (stop should prevent firing)", app.searchQuery)
+	}
+}
+
+func TestSearchDebounce_LiveSearchKeepsFocus(t *testing.T) {
+	cfg := config.Config{PageSize: 10, CacheTTL: time.Minute}
+	app := NewApp(&linearapi.Client{}, cfg, nil)
+	app.queueUpdateDraw = func(f func()) { f() }
+
+	app.fetchIssuesPage = func(ctx context.Context, params linearapi.FetchIssuesParams, after *string) (linearapi.IssuePage, error) {
+		return linearapi.IssuePage{Issues: []linearapi.Issue{}, HasNext: false}, nil
+	}
+	app.fetchIssueByID = func(ctx context.Context, id string) (linearapi.Issue, error) {
+		return linearapi.Issue{}, nil
+	}
+
+	// Set focus to palette (simulating search palette open)
+	app.focusedPane = FocusPalette
+
+	app.setSearchQueryLive("live-query")
+
+	// Wait for the async refresh to complete
+	waitForCondition(t, time.Second, func() bool {
+		return app.searchQuery == "live-query"
+	})
+
+	// Focus should NOT have changed to FocusIssues
+	if app.focusedPane != FocusPalette {
+		t.Fatalf("focusedPane = %v, want %v (palette should stay focused)", app.focusedPane, FocusPalette)
+	}
+}
