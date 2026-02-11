@@ -79,28 +79,24 @@ Example `~/.linear-tui/config.json`:
 
 Requires Go 1.24 or later.
 
-Clone and build locally:
-
 ```bash
 git clone https://github.com/sushantvema-harper/linear-tui.git
 cd linear-tui
-go build -o linear-tui ./cmd/linear-tui
+./scripts/install.sh
 ```
 
-Then move the binary somewhere on your `$PATH`:
+This builds the binary and symlinks it to `~/.local/bin/linear-tui`. Make sure `~/.local/bin` is on your `$PATH`:
 
 ```bash
-# Option A: symlink into a directory already on your PATH
-ln -sf "$(pwd)/linear-tui" /usr/local/bin/linear-tui
-
-# Option B: copy the binary
-cp linear-tui /usr/local/bin/
+# Add to your shell profile (~/.bashrc, ~/.zshrc, etc.) if not already present
+export PATH="${HOME}/.local/bin:${PATH}"
 ```
 
-Or install directly with `go install`:
+### Updating
 
 ```bash
-go install github.com/sushantvema-harper/linear-tui/cmd/linear-tui@latest
+cd linear-tui
+git pull && ./scripts/install.sh
 ```
 
 ### Download Binary
