@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
 )
 
 // TestBuildIssueContext_RendersFields verifies basic rendering.

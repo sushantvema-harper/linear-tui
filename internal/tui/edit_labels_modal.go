@@ -3,7 +3,7 @@ package tui
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
 )
 
 // EditLabelsModal manages a multi-select modal for editing issue labels.

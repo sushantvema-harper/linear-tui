@@ -6,7 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/roeyazroel/linear-tui/internal/config"
+	"github.com/sushantvema-harper/linear-tui/internal/config"
 )
 
 // AgentPromptTemplatesModal manages editing of agent prompt templates.

@@ -1,18 +1,18 @@
 # Default owners for everything in the repo
-* @roeyazroel
+* @sushantvema-harper
 
 # Core application code
-/cmd/ @roeyazroel
-/internal/ @roeyazroel
+/cmd/ @sushantvema-harper
+/internal/ @sushantvema-harper
 
 # Configuration files
-/.github/ @roeyazroel
-/.golangci.yml @roeyazroel
-/.goreleaser.yml @roeyazroel
-/go.mod @roeyazroel
-/go.sum @roeyazroel
+/.github/ @sushantvema-harper
+/.golangci.yml @sushantvema-harper
+/.goreleaser.yml @sushantvema-harper
+/go.mod @sushantvema-harper
+/go.sum @sushantvema-harper
 
 # Documentation
-/README.md @roeyazroel
-/docs/ @roeyazroel
-/LICENSE @roeyazroel
+/README.md @sushantvema-harper
+/docs/ @sushantvema-harper
+/LICENSE @sushantvema-harper

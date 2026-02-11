@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
 )
 
 func TestRenderIssueRow(t *testing.T) {

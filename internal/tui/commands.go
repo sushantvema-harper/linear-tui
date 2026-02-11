@@ -7,9 +7,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/roeyazroel/linear-tui/internal/agents"
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
-	"github.com/roeyazroel/linear-tui/internal/logger"
+	"github.com/sushantvema-harper/linear-tui/internal/agents"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/logger"
 )
 
 // FormatShortcut returns a human-readable string for a shortcut.

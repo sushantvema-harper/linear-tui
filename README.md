@@ -75,31 +75,37 @@ Example `~/.linear-tui/config.json`:
 
 ## Installation
 
-### Homebrew (macOS)
+### From Source (Recommended)
+
+Requires Go 1.24 or later.
+
+Clone and build locally:
 
 ```bash
-brew install roeyazroel/linear-tui/linear-tui
-```
-
-### From Source
-
-Requires Go 1.24 or later:
-
-```bash
-go install github.com/roeyazroel/linear-tui/cmd/linear-tui@latest
-```
-
-Or clone and build locally:
-
-```bash
-git clone https://github.com/roeyazroel/linear-tui.git
+git clone https://github.com/sushantvema-harper/linear-tui.git
 cd linear-tui
-go build ./cmd/linear-tui
+go build -o linear-tui ./cmd/linear-tui
+```
+
+Then move the binary somewhere on your `$PATH`:
+
+```bash
+# Option A: symlink into a directory already on your PATH
+ln -sf "$(pwd)/linear-tui" /usr/local/bin/linear-tui
+
+# Option B: copy the binary
+cp linear-tui /usr/local/bin/
+```
+
+Or install directly with `go install`:
+
+```bash
+go install github.com/sushantvema-harper/linear-tui/cmd/linear-tui@latest
 ```
 
 ### Download Binary
 
-Download pre-built binaries from the [Releases](https://github.com/roeyazroel/linear-tui/releases) page.
+Download pre-built binaries from the [Releases](https://github.com/sushantvema-harper/linear-tui/releases) page.
 
 ## Usage
 

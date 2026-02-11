@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/roeyazroel/linear-tui/internal/logger"
+	"github.com/sushantvema-harper/linear-tui/internal/logger"
 	"github.com/shurcooL/graphql"
 )
 

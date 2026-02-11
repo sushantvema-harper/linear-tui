@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/roeyazroel/linear-tui/internal/agents"
+	"github.com/sushantvema-harper/linear-tui/internal/agents"
 )
 
 // TestAgentStreamBuffer_ThinkingStreams verifies thinking lines stream in chunks.

@@ -8,9 +8,9 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/roeyazroel/linear-tui/internal/agents"
-	"github.com/roeyazroel/linear-tui/internal/config"
-	"github.com/roeyazroel/linear-tui/internal/logger"
+	"github.com/sushantvema-harper/linear-tui/internal/agents"
+	"github.com/sushantvema-harper/linear-tui/internal/config"
+	"github.com/sushantvema-harper/linear-tui/internal/logger"
 )
 
 const (

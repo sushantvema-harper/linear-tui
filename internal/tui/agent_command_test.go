@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/roeyazroel/linear-tui/internal/agents"
-	"github.com/roeyazroel/linear-tui/internal/config"
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/agents"
+	"github.com/sushantvema-harper/linear-tui/internal/config"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
 )
 
 // TestAskAgentCommand_ShowsModalsAndStreams verifies the command flow.

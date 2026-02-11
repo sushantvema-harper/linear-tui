@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/roeyazroel/linear-tui/internal/config"
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
-	"github.com/roeyazroel/linear-tui/internal/logger"
-	"github.com/roeyazroel/linear-tui/internal/tui"
+	"github.com/sushantvema-harper/linear-tui/internal/config"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/logger"
+	"github.com/sushantvema-harper/linear-tui/internal/tui"
 )
 
 func main() {

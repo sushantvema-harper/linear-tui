@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
 )
 
 // BuildIssueContext renders title, description, and comments into plain text.

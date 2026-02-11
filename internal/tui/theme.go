@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/roeyazroel/linear-tui/internal/config"
+	"github.com/sushantvema-harper/linear-tui/internal/config"
 )
 
 // Theme defines the color palette and styles for the application.

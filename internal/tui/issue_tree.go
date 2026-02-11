@@ -3,7 +3,7 @@ package tui
 import (
 	"sort"
 
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
 )
 
 // IssueRow represents a single row in the issues table with hierarchy info.

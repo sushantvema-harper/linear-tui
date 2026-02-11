@@ -1,4 +1,4 @@
-module github.com/roeyazroel/linear-tui
+module github.com/sushantvema-harper/linear-tui
 
 go 1.24.0
 

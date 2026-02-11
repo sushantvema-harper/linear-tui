@@ -63,7 +63,7 @@ changelog:
 
 release:
   github:
-    owner: roeyazroel
+    owner: sushantvema-harper
     name: linear-tui
   draft: false
   prerelease: auto
@@ -75,12 +75,12 @@ release:
 brews:
   - name: linear-tui
     repository:
-      owner: roeyazroel
+      owner: sushantvema-harper
       name: homebrew-linear-tui
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/roeyazroel/linear-tui"
+    homepage: "https://github.com/sushantvema-harper/linear-tui"
     description: "Terminal user interface for Linear"
     license: "MIT"
     install: |

@@ -9,7 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/roeyazroel/linear-tui/internal/agents"
+	"github.com/sushantvema-harper/linear-tui/internal/agents"
 )
 
 // AgentOutputModal displays streaming output from an agent run.

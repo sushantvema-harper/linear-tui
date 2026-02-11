@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/roeyazroel/linear-tui/internal/config"
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/config"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
 )
 
 // stringPtr returns a string pointer for test helpers.

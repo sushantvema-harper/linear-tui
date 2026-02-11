@@ -5,8 +5,8 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
-	"github.com/roeyazroel/linear-tui/internal/logger"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/logger"
 )
 
 // CreateIssueModal manages the create issue form overlay.

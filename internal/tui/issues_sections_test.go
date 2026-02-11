@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
 )
 
 func TestSplitIssuesByAssignee(t *testing.T) {

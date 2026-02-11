@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/roeyazroel/linear-tui/internal/logger"
+	"github.com/sushantvema-harper/linear-tui/internal/logger"
 )
 
 const (

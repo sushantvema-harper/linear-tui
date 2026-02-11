@@ -10,11 +10,11 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/roeyazroel/linear-tui/internal/agents"
-	"github.com/roeyazroel/linear-tui/internal/cache"
-	"github.com/roeyazroel/linear-tui/internal/config"
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
-	"github.com/roeyazroel/linear-tui/internal/logger"
+	"github.com/sushantvema-harper/linear-tui/internal/agents"
+	"github.com/sushantvema-harper/linear-tui/internal/cache"
+	"github.com/sushantvema-harper/linear-tui/internal/config"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/logger"
 )
 
 // SortField represents a field to sort issues by.

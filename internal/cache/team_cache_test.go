@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/roeyazroel/linear-tui/internal/linearapi"
+	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
 )
 
 // mockClient is a mock implementation for testing cache behavior.
