@@ -154,6 +154,7 @@ To disable logging, set `log_file` to an empty string in the settings file or vi
 | `:` | Open command palette |
 | `/` | Open search palette |
 | `Tab` / `Shift+Tab` | Cycle between panes |
+| `Ctrl+B` | Toggle navigation pane |
 | `Esc` | Close palette / Clear search |
 | `q` | Quit |
 

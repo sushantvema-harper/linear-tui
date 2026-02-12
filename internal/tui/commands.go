@@ -260,30 +260,11 @@ func DefaultCommands(app *App) []Command {
 			},
 		},
 		{
-			ID:       "sort_updated",
-			Title:    "Sort by updated",
-			Keywords: []string{"sort", "updated", "recent"},
-			// No shortcut - ⌘+1/2/3 conflicts with terminal tab switching
+			ID:       "sort",
+			Title:    "Sort by...",
+			Keywords: []string{"sort", "updated", "created", "priority", "recent", "new", "urgent", "order"},
 			Run: func(a *App) {
-				a.setSortField(SortByUpdatedAt)
-			},
-		},
-		{
-			ID:       "sort_created",
-			Title:    "Sort by created",
-			Keywords: []string{"sort", "created", "new"},
-			// No shortcut - ⌘+1/2/3 conflicts with terminal tab switching
-			Run: func(a *App) {
-				a.setSortField(SortByCreatedAt)
-			},
-		},
-		{
-			ID:       "sort_priority",
-			Title:    "Sort by priority",
-			Keywords: []string{"sort", "priority", "urgent"},
-			// No shortcut - ⌘+1/2/3 conflicts with terminal tab switching
-			Run: func(a *App) {
-				a.setSortField(SortByPriority)
+				a.ShowSortPicker()
 			},
 		},
 		{
@@ -739,6 +720,15 @@ func DefaultCommands(app *App) []Command {
 						go a.refreshIssues(issue.ID)
 					})
 				}()
+			},
+		},
+		{
+			ID:              "toggle_navigation",
+			Title:           "Toggle navigation pane",
+			Keywords:        []string{"toggle", "navigation", "sidebar", "nav", "hide", "show"},
+			ShortcutDisplay: "Ctrl+B",
+			Run: func(a *App) {
+				a.toggleNavigation()
 			},
 		},
 		{

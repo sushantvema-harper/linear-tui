@@ -119,6 +119,10 @@ type App struct {
 	focusedDetailsView     bool // false = description, true = comments
 	detailsCommentsVisible bool // Tracks whether comments view is shown
 
+	// Navigation pane visibility
+	contentFlex *tview.Flex // horizontal flex: nav | issues | details
+	navVisible  bool        // whether navigation pane is shown (default: true)
+
 	// Fullscreen description view
 	detailsFullscreen     bool            // whether fullscreen mode is active
 	detailsFullscreenView *tview.TextView // dedicated fullscreen TextView
@@ -617,15 +621,16 @@ func (a *App) buildLayout() {
 	a.statusBar = a.buildStatusBar()
 
 	// Create horizontal split: navigation (20%) | issues (50%) | details (30%)
-	contentFlex := tview.NewFlex().
+	a.contentFlex = tview.NewFlex().
 		AddItem(a.navigationTree, 0, 2, true).
 		AddItem(a.issuesColumn, 0, 5, false).
 		AddItem(a.detailsView, 0, 3, false)
+	a.navVisible = true
 
 	// Create vertical layout: content + status bar
 	a.mainLayout = tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(contentFlex, 0, 1, true).
+		AddItem(a.contentFlex, 0, 1, true).
 		AddItem(a.statusBar, 1, 1, false)
 
 	// Build palette modal
@@ -648,6 +653,23 @@ func (a *App) buildLayout() {
 	a.pages.AddPage("palette", a.paletteModal, true, false)
 
 	// Set initial focus
+	a.updateFocus()
+}
+
+// toggleNavigation toggles the navigation pane visibility.
+func (a *App) toggleNavigation() {
+	a.navVisible = !a.navVisible
+	a.contentFlex.Clear()
+	if a.navVisible {
+		a.contentFlex.AddItem(a.navigationTree, 0, 2, false)
+	}
+	a.contentFlex.AddItem(a.issuesColumn, 0, 5, false)
+	a.contentFlex.AddItem(a.detailsView, 0, 3, false)
+
+	// If nav was hidden and focus was on it, move to issues
+	if !a.navVisible && a.focusedPane == FocusNavigation {
+		a.focusedPane = FocusIssues
+	}
 	a.updateFocus()
 }
 
@@ -719,6 +741,9 @@ func (a *App) bindGlobalKeys() {
 			}
 		case tcell.KeyCtrlC:
 			a.app.Stop()
+			return nil
+		case tcell.KeyCtrlB:
+			a.toggleNavigation()
 			return nil
 		case tcell.KeyTab, tcell.KeyBacktab:
 			// Tab cycles forward through panes (Navigation -> Issues -> Details)
@@ -927,6 +952,9 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 
 	switch event.Key() {
 	case tcell.KeyLeft:
+		if !a.navVisible {
+			return nil
+		}
 		a.focusedPane = FocusNavigation
 		a.updateFocus()
 		return nil
@@ -943,6 +971,9 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 		// Handle vim-style pane navigation
 		switch r {
 		case 'h':
+			if !a.navVisible {
+				return nil
+			}
 			a.focusedPane = FocusNavigation
 			a.updateFocus()
 			return nil
@@ -953,14 +984,14 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 			return nil
 		case 'j':
 			// j: move down from My Issues to Other Issues
-			if a.activeIssuesSection == IssuesSectionMy && len(a.otherIssueRows) > 0 {
+			if a.activeIssuesSection == IssuesSectionMy {
 				a.activeIssuesSection = IssuesSectionOther
 				a.updateFocus()
 			}
 			return nil
 		case 'k':
 			// k: move up from Other Issues to My Issues
-			if a.activeIssuesSection == IssuesSectionOther && len(a.myIssueRows) > 0 {
+			if a.activeIssuesSection == IssuesSectionOther {
 				a.activeIssuesSection = IssuesSectionMy
 				a.updateFocus()
 			}
@@ -1241,7 +1272,16 @@ func (a *App) cyclePanesForward() {
 			a.focusedDetailsView = false // Start with description
 		}
 	case FocusDetails:
-		a.focusedPane = FocusNavigation
+		if a.navVisible {
+			a.focusedPane = FocusNavigation
+		} else {
+			a.focusedPane = FocusIssues
+			if len(a.myIssueRows) > 0 {
+				a.activeIssuesSection = IssuesSectionMy
+			} else {
+				a.activeIssuesSection = IssuesSectionOther
+			}
+		}
 		// FocusPalette is excluded from cycling
 	}
 	a.updateFocus()
@@ -1261,13 +1301,21 @@ func (a *App) cyclePanesBackward() {
 			if a.activeIssuesSection == IssuesSectionOther {
 				// Switch from Other Issues to My Issues
 				a.activeIssuesSection = IssuesSectionMy
-			} else {
+			} else if a.navVisible {
 				// Switch from My Issues to Navigation pane
 				a.focusedPane = FocusNavigation
+			} else {
+				// Nav hidden: wrap to Details
+				a.focusedPane = FocusDetails
+				a.focusedDetailsView = false
 			}
-		} else {
+		} else if a.navVisible {
 			// Only one section exists, move to Navigation
 			a.focusedPane = FocusNavigation
+		} else {
+			// Nav hidden: wrap to Details
+			a.focusedPane = FocusDetails
+			a.focusedDetailsView = false
 		}
 	case FocusDetails:
 		a.focusedPane = FocusIssues
@@ -2005,6 +2053,21 @@ func (a *App) setSortField(field SortField) {
 	a.sortField = field
 	// Run in goroutine to avoid deadlock when called from tview callbacks
 	go a.refreshIssues()
+}
+
+// ShowSortPicker shows a picker for selecting the sort field.
+func (a *App) ShowSortPicker() {
+	items := []PickerItem{
+		{ID: string(SortByUpdatedAt), Label: "Updated"},
+		{ID: string(SortByCreatedAt), Label: "Created"},
+		{ID: string(SortByPriority), Label: "Priority"},
+	}
+
+	a.pickerActive = true
+	a.pickerModal.Show("Sort By", items, func(item PickerItem) {
+		a.pickerActive = false
+		a.setSortField(SortField(item.ID))
+	})
 }
 
 // updateStatusBar updates the status bar with current information.
