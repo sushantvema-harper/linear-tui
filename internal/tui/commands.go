@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"unicode"
 
 	"github.com/sushantvema-harper/linear-tui/internal/agents"
 	"github.com/sushantvema-harper/linear-tui/internal/linearapi"
@@ -14,9 +15,13 @@ import (
 )
 
 // FormatShortcut returns a human-readable string for a shortcut.
+// Uppercase runes display as "Shift+X" to distinguish from lowercase "X".
 func FormatShortcut(r rune) string {
 	if r == 0 {
 		return ""
+	}
+	if unicode.IsUpper(r) {
+		return "Shift+" + string(r)
 	}
 	return strings.ToUpper(string(r))
 }
@@ -744,6 +749,24 @@ func DefaultCommands(app *App) []Command {
 					return
 				}
 				a.createCommentModal.Show(issue.ID, a.handleCreateComment)
+			},
+		},
+		{
+			ID:           "browse_comments",
+			Title:        "Browse comments",
+			Keywords:     []string{"browse", "comments", "comment", "viewer"},
+			ShortcutRune: 'c',
+			Run: func(a *App) {
+				a.openCommentsBrowser()
+			},
+		},
+		{
+			ID:           "browse_attachments",
+			Title:        "Browse attachments",
+			Keywords:     []string{"browse", "attachments", "attachment", "files"},
+			ShortcutRune: 'A',
+			Run: func(a *App) {
+				a.openAttachmentsBrowser()
 			},
 		},
 	}

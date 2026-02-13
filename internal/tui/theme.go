@@ -35,7 +35,7 @@ var LinearTheme = Theme{
 	Border:        tcell.NewRGBColor(60, 60, 60),    // #3C3C3C
 	BorderFocus:   tcell.NewRGBColor(94, 106, 210),  // #5E6AD2 (Linear Purple-ish)
 	SelectionText: tcell.ColorWhite,
-	SelectionBg:   tcell.NewRGBColor(40, 40, 50),    // Slight purple tint dark bg
+	SelectionBg:   tcell.NewRGBColor(47, 53, 105),    // #2F3569 — visible blue-purple
 	HeaderBg:      tcell.NewRGBColor(30, 30, 30),    // #1E1E1E
 	HeaderText:    tcell.NewRGBColor(160, 160, 160), // #A0A0A0
 	SecondaryText: tcell.NewRGBColor(120, 120, 120), // #787878

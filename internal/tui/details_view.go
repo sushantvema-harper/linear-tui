@@ -158,6 +158,11 @@ func (a *App) updateDetailsView() {
 	}
 	headerLines = append(headerLines, fmt.Sprintf("%sLabels:[-]     %s%s[-]", keyColor, valColor, labelsText))
 
+	// Attachments count
+	if len(issue.Attachments) > 0 {
+		headerLines = append(headerLines, fmt.Sprintf("%sAttachments:[-] %s%d[-]", keyColor, valColor, len(issue.Attachments)))
+	}
+
 	// Parent issue (if this is a sub-issue)
 	if issue.Parent != nil {
 		parentText := fmt.Sprintf("%s - %s", issue.Parent.Identifier, issue.Parent.Title)

@@ -23,7 +23,8 @@ A terminal user interface (TUI) for Linear built with Go and tview.
 - Issue descriptions with markdown rendering
 - Sub-issues support (expand/collapse, create, view parent)
 - Issue management (create, edit title, edit labels, archive)
-- Comments (view and add)
+- Comments (view, add, browse with search/copy/open)
+- Attachments browser (browse, search, copy URL, open)
 - Status management (change status, assign/unassign)
 - Search and filtering
 - Sorting (by updated, created, or priority)
@@ -224,6 +225,8 @@ To disable logging, set `log_file` to an empty string in the settings file or vi
 | `d` | Remove parent |
 | `]` | Expand all sub-issues |
 | `[` | Collapse all sub-issues |
+| `c` | Browse comments |
+| `A` | Browse attachments |
 | `f` | Fullscreen issue description |
 
 ### Details Pane (right pane)
@@ -238,6 +241,33 @@ To disable logging, set `log_file` to an empty string in the settings file or vi
 | `h` / `←` | Focus issues pane |
 | `f` | Fullscreen issue description |
 | `E` | Edit issue description in `$EDITOR` |
+
+### Comments Browser
+
+| Key | Action |
+|-----|--------|
+| `n` / `j` | Next comment |
+| `p` / `k` | Previous comment |
+| `Ctrl+N` / `Ctrl+P` | Scroll up/down |
+| `Ctrl+D` / `Ctrl+U` | Half-page down/up |
+| `/` | Toggle search filter |
+| `y` | Copy comment link |
+| `o` | Open comment in browser |
+| `t` | Add new comment |
+| `Esc` / `q` | Close browser |
+
+### Attachments Browser
+
+| Key | Action |
+|-----|--------|
+| `n` / `j` | Next attachment |
+| `p` / `k` | Previous attachment |
+| `Ctrl+N` / `Ctrl+P` | Scroll up/down |
+| `Ctrl+D` / `Ctrl+U` | Half-page down/up |
+| `/` | Toggle search filter |
+| `y` | Copy attachment URL |
+| `o` | Open attachment URL |
+| `Esc` / `q` | Close browser |
 
 ### Command Palette
 

@@ -182,6 +182,18 @@ type Comment struct {
 	UpdatedAt time.Time
 	Author    User
 	IssueID   string
+	URL       string
+}
+
+// Attachment represents a file or link attached to a Linear issue.
+type Attachment struct {
+	ID         string
+	Title      string
+	Subtitle   string
+	URL        string
+	SourceType string
+	CreatedAt  time.Time
+	Creator    User
 }
 
 // Issue represents a Linear issue.
@@ -205,6 +217,7 @@ type Issue struct {
 	Parent      *IssueRef       // Parent issue reference (nil if top-level)
 	Children    []IssueChildRef // Child/sub-issue references
 	Comments    []Comment       // Comments on this issue
+	Attachments []Attachment    // Attachments on this issue
 }
 
 // IssueFetchProgress describes progress for a paginated issue fetch.
@@ -1061,6 +1074,7 @@ func (c *Client) FetchIssueByID(ctx context.Context, id string) (Issue, error) {
 					Body      graphql.String
 					CreatedAt graphql.String
 					UpdatedAt graphql.String
+					URL       graphql.String
 					User      struct {
 						ID          graphql.String
 						Name        graphql.String
@@ -1070,6 +1084,23 @@ func (c *Client) FetchIssueByID(ctx context.Context, id string) (Issue, error) {
 					}
 				}
 			} `graphql:"comments(first: 100, orderBy: createdAt)"`
+			Attachments struct {
+				Nodes []struct {
+					ID         graphql.String
+					Title      graphql.String
+					Subtitle   graphql.String
+					URL        graphql.String
+					SourceType *graphql.String
+					CreatedAt  graphql.String
+					Creator    *struct {
+						ID          graphql.String
+						Name        graphql.String
+						DisplayName graphql.String
+						Email       graphql.String
+						IsMe        graphql.Boolean
+					}
+				}
+			} `graphql:"attachments(first: 50)"`
 		} `graphql:"issue(id: $id)"`
 	}
 
@@ -1142,6 +1173,10 @@ func (c *Client) FetchIssueByID(ctx context.Context, id string) (Issue, error) {
 	for _, node := range query.Issue.Comments.Nodes {
 		commentCreatedAt := parseTime(string(node.CreatedAt))
 		commentUpdatedAt := parseTime(string(node.UpdatedAt))
+		commentURL := string(node.URL)
+		if commentURL == "" {
+			commentURL = string(query.Issue.URL) + "#comment-" + string(node.ID)
+		}
 		comments = append(comments, Comment{
 			ID:        string(node.ID),
 			Body:      string(node.Body),
@@ -1155,6 +1190,36 @@ func (c *Client) FetchIssueByID(ctx context.Context, id string) (Issue, error) {
 				IsMe:        bool(node.User.IsMe),
 			},
 			IssueID: string(query.Issue.ID),
+			URL:     commentURL,
+		})
+	}
+
+	// Parse attachments
+	attachments := make([]Attachment, 0, len(query.Issue.Attachments.Nodes))
+	for _, node := range query.Issue.Attachments.Nodes {
+		attachCreatedAt := parseTime(string(node.CreatedAt))
+		sourceType := ""
+		if node.SourceType != nil {
+			sourceType = string(*node.SourceType)
+		}
+		creator := User{}
+		if node.Creator != nil {
+			creator = User{
+				ID:          string(node.Creator.ID),
+				Name:        string(node.Creator.Name),
+				DisplayName: string(node.Creator.DisplayName),
+				Email:       string(node.Creator.Email),
+				IsMe:        bool(node.Creator.IsMe),
+			}
+		}
+		attachments = append(attachments, Attachment{
+			ID:         string(node.ID),
+			Title:      string(node.Title),
+			Subtitle:   string(node.Subtitle),
+			URL:        string(node.URL),
+			SourceType: sourceType,
+			CreatedAt:  attachCreatedAt,
+			Creator:    creator,
 		})
 	}
 
@@ -1178,6 +1243,7 @@ func (c *Client) FetchIssueByID(ctx context.Context, id string) (Issue, error) {
 		Parent:      parent,
 		Children:    children,
 		Comments:    comments,
+		Attachments: attachments,
 	}, nil
 }
 

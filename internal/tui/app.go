@@ -130,6 +130,12 @@ type App struct {
 
 	// Vim-style prefix key state
 	pendingG bool // true when 'g' has been pressed and waiting for the next key
+
+	// Browser modals
+	commentsBrowser          *CommentsBrowser
+	attachmentsBrowser       *AttachmentsBrowser
+	commentsBrowserActive    bool
+	attachmentsBrowserActive bool
 }
 
 // FocusTarget indicates which pane has focus.
@@ -648,6 +654,8 @@ func (a *App) buildLayout() {
 	a.agentPromptModal = NewAgentPromptModal(a)
 	a.agentOutputModal = NewAgentOutputModal(a)
 	a.agentRunner = agents.NewRunner()
+	a.commentsBrowser = NewCommentsBrowser(a)
+	a.attachmentsBrowser = NewAttachmentsBrowser(a)
 
 	// Add main layout to pages
 	a.pages.AddPage("main", a.mainLayout, true, true)
@@ -680,6 +688,14 @@ func (a *App) bindGlobalKeys() {
 		// Handle fullscreen description view if active
 		if a.detailsFullscreen {
 			return a.handleFullscreenKey(event)
+		}
+
+		// Handle browser modals if active
+		if a.commentsBrowserActive {
+			return a.commentsBrowser.HandleKey(event)
+		}
+		if a.attachmentsBrowserActive {
+			return a.attachmentsBrowser.HandleKey(event)
 		}
 
 		// Handle picker modal if active
@@ -1134,6 +1150,46 @@ func (a *App) closeDetailsFullscreen() {
 	a.pages.RemovePage("details_fullscreen")
 	a.detailsFullscreen = false
 	a.updateFocus()
+}
+
+// openCommentsBrowser opens the comments browser for the selected issue.
+func (a *App) openCommentsBrowser() {
+	a.issuesMu.RLock()
+	issue := a.selectedIssue
+	a.issuesMu.RUnlock()
+	if issue == nil {
+		return
+	}
+	if len(issue.Comments) == 0 {
+		a.showToast("No comments on this issue")
+		return
+	}
+	a.commentsBrowser.Show(issue.Comments, issue.URL, issue.ID)
+}
+
+// closeCommentsBrowser closes the comments browser.
+func (a *App) closeCommentsBrowser() {
+	a.commentsBrowser.Hide()
+}
+
+// openAttachmentsBrowser opens the attachments browser for the selected issue.
+func (a *App) openAttachmentsBrowser() {
+	a.issuesMu.RLock()
+	issue := a.selectedIssue
+	a.issuesMu.RUnlock()
+	if issue == nil {
+		return
+	}
+	if len(issue.Attachments) == 0 {
+		a.showToast("No attachments on this issue")
+		return
+	}
+	a.attachmentsBrowser.Show(issue.Attachments)
+}
+
+// closeAttachmentsBrowser closes the attachments browser.
+func (a *App) closeAttachmentsBrowser() {
+	a.attachmentsBrowser.Hide()
 }
 
 // handleFullscreenKey handles keyboard input when fullscreen description view is active.
