@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -1006,8 +1007,17 @@ func (a *App) handleIssuesKey(event *tcell.EventKey) *tcell.EventKey {
 		}
 		// Handle command shortcuts (plain letters) - skip keys handled by the table
 		if r != 'G' {
+			// Exact match first (preserves e/E distinction)
 			for _, cmd := range a.paletteCtrl.commands {
 				if cmd.ShortcutRune != 0 && cmd.ShortcutRune == r {
+					cmd.Run(a)
+					return nil
+				}
+			}
+			// Case-insensitive fallback (so A triggers 'a', M triggers 'm', etc.)
+			lowerR := unicode.ToLower(r)
+			for _, cmd := range a.paletteCtrl.commands {
+				if cmd.ShortcutRune != 0 && unicode.ToLower(cmd.ShortcutRune) == lowerR {
 					cmd.Run(a)
 					return nil
 				}
