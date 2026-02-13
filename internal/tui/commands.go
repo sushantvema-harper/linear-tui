@@ -291,6 +291,7 @@ func DefaultCommands(app *App) []Command {
 					return
 				}
 				_ = copyToClipboard(issue.Identifier)
+				a.showToast(fmt.Sprintf("Copied %s", issue.Identifier))
 			},
 		},
 		{
@@ -304,6 +305,7 @@ func DefaultCommands(app *App) []Command {
 					return
 				}
 				_ = copyToClipboard(issue.URL)
+				a.showToast(fmt.Sprintf("Copied URL for %s", issue.Identifier))
 			},
 		},
 		{
