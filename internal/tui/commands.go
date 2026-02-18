@@ -752,6 +752,23 @@ func DefaultCommands(app *App) []Command {
 			},
 		},
 		{
+			ID:       "copy_project_name",
+			Title:    "Copy project name",
+			Keywords: []string{"copy", "project", "name"},
+			Run: func(a *App) {
+				issue := a.GetSelectedIssue()
+				if issue == nil {
+					return
+				}
+				if issue.ProjectName == "" {
+					a.showToast("No project assigned")
+					return
+				}
+				_ = copyToClipboard(issue.ProjectName)
+				a.showToast(fmt.Sprintf("Copied \"%s\"", issue.ProjectName))
+			},
+		},
+		{
 			ID:           "browse_comments",
 			Title:        "Browse comments",
 			Keywords:     []string{"browse", "comments", "comment", "viewer"},

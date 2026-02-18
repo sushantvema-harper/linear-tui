@@ -211,6 +211,7 @@ type Issue struct {
 	CreatedAt   time.Time
 	TeamID      string
 	ProjectID   string
+	ProjectName string
 	URL         string
 	Archived    bool
 	Labels      []IssueLabel
@@ -671,7 +672,8 @@ func (c *Client) searchIssuesPage(ctx context.Context, params FetchIssuesParams,
 					ID graphql.String
 				}
 				Project *struct {
-					ID graphql.String
+					ID   graphql.String
+					Name graphql.String
 				}
 				Labels struct {
 					Nodes []struct {
@@ -828,7 +830,8 @@ func (c *Client) fetchIssuesWithFilterPage(ctx context.Context, params FetchIssu
 					ID graphql.String
 				}
 				Project *struct {
-					ID graphql.String
+					ID   graphql.String
+					Name graphql.String
 				}
 				Labels struct {
 					Nodes []struct {
@@ -932,9 +935,11 @@ func (c *Client) parseIssueNode(node interface{}) Issue {
 	teamID := v.FieldByName("Team").FieldByName("ID").String()
 
 	projectID := ""
+	projectName := ""
 	projectField := v.FieldByName("Project")
 	if !projectField.IsNil() {
 		projectID = projectField.Elem().FieldByName("ID").String()
+		projectName = projectField.Elem().FieldByName("Name").String()
 	}
 
 	url := v.FieldByName("URL").String()
@@ -993,6 +998,7 @@ func (c *Client) parseIssueNode(node interface{}) Issue {
 		Description: description,
 		TeamID:      teamID,
 		ProjectID:   projectID,
+		ProjectName: projectName,
 		URL:         url,
 		Archived:    archived,
 		Labels:      labels,
@@ -1041,7 +1047,8 @@ func (c *Client) FetchIssueByID(ctx context.Context, id string) (Issue, error) {
 				ID graphql.String
 			}
 			Project *struct {
-				ID graphql.String
+				ID   graphql.String
+				Name graphql.String
 			}
 			Labels struct {
 				Nodes []struct {
@@ -1130,8 +1137,10 @@ func (c *Client) FetchIssueByID(ctx context.Context, id string) (Issue, error) {
 	}
 
 	projectID := ""
+	projectName := ""
 	if query.Issue.Project != nil {
 		projectID = string(query.Issue.Project.ID)
+		projectName = string(query.Issue.Project.Name)
 	}
 
 	archived := query.Issue.ArchivedAt != nil
@@ -1237,6 +1246,7 @@ func (c *Client) FetchIssueByID(ctx context.Context, id string) (Issue, error) {
 		Description: description,
 		TeamID:      string(query.Issue.Team.ID),
 		ProjectID:   projectID,
+		ProjectName: projectName,
 		URL:         string(query.Issue.URL),
 		Archived:    archived,
 		Labels:      labels,
@@ -1272,7 +1282,8 @@ func (c *Client) CreateIssue(ctx context.Context, input CreateIssueInput) (Issue
 					ID graphql.String
 				}
 				Project *struct {
-					ID graphql.String
+					ID   graphql.String
+					Name graphql.String
 				}
 				Labels struct {
 					Nodes []struct {
@@ -1341,8 +1352,10 @@ func (c *Client) CreateIssue(ctx context.Context, input CreateIssueInput) (Issue
 	}
 
 	projectID := ""
+	projectName := ""
 	if node.Project != nil {
 		projectID = string(node.Project.ID)
+		projectName = string(node.Project.Name)
 	}
 
 	// Parse labels
@@ -1369,6 +1382,7 @@ func (c *Client) CreateIssue(ctx context.Context, input CreateIssueInput) (Issue
 		Description: description,
 		TeamID:      string(node.Team.ID),
 		ProjectID:   projectID,
+		ProjectName: projectName,
 		URL:         string(node.URL),
 		Labels:      labels,
 	}, nil
@@ -1399,7 +1413,8 @@ func (c *Client) UpdateIssue(ctx context.Context, input UpdateIssueInput) (Issue
 					ID graphql.String
 				}
 				Project *struct {
-					ID graphql.String
+					ID   graphql.String
+					Name graphql.String
 				}
 				Labels struct {
 					Nodes []struct {
@@ -1485,8 +1500,10 @@ func (c *Client) UpdateIssue(ctx context.Context, input UpdateIssueInput) (Issue
 	}
 
 	projectID := ""
+	projectName := ""
 	if node.Project != nil {
 		projectID = string(node.Project.ID)
+		projectName = string(node.Project.Name)
 	}
 
 	// Parse labels
@@ -1513,6 +1530,7 @@ func (c *Client) UpdateIssue(ctx context.Context, input UpdateIssueInput) (Issue
 		Description: description,
 		TeamID:      string(node.Team.ID),
 		ProjectID:   projectID,
+		ProjectName: projectName,
 		URL:         string(node.URL),
 		Labels:      labels,
 	}, nil
